@@ -1,0 +1,49 @@
+{
+  "$schema": "https://opencode.ai/config.json"
+  // Plugin is loaded globally from ~/.config/opencode/opencode.jsonc, which
+  // already points at this repo's dist/index.js. Re-enabling the block below
+  // would register the plugin a second time in this project.
+  //
+  // "plugin": [
+  //   [
+  //     "./src/index.ts",
+  //     {
+  //       // Optional overrides. All fields are optional; defaults shown.
+  //       // "githubToken": "ghp_...",
+  //       // "vcpus": 2,
+  //       // "runtime": "node24",
+  //       // "snapshotExpiration": 604800000,
+  //       // "uncommitted": "refuse",
+  //       //
+  //       // Egress security: "default" enforces a curated domain allowlist for
+  //       // the sandbox to block opportunistic exfiltration; "allow-all" opts
+  //       // out. "extraAllowDomains" appends to the curated list.
+  //       // "egressPolicy": "default",
+  //       // "extraAllowDomains": ["api.example.com"],
+  //       //
+  //       // Session lifetime: persistent sandboxes start with this timeout
+  //       // (default 45min = Hobby ceiling). Pro/Enterprise can push up to 5h
+  //       // (clamped to Vercel SDK's 18,000,000ms ceiling minus a 30s buffer).
+  //       // A heartbeat extends the session by heartbeatExtendMs every
+  //       // heartbeatIntervalMs while the workspace is in use.
+  //       // "sessionTimeoutMs": 2700000,
+  //       // "heartbeatIntervalMs": 300000,
+  //       // "heartbeatExtendMs": 900000,
+  //       //
+  //       // Expose additional ports from the sandbox so dev servers started
+  //       // inside the workspace get a public URL via sandbox.domain(port).
+  //       // Defaults cover Next/Express/Remix (3000), Vite/SvelteKit (5173),
+  //       // Astro (4321), and Django/general (8000).
+  //       // "extraPorts": [3000, 5173, 4321, 8000],
+  //       //
+  //       // Mirror Vercel project artifacts (`.vercel/` + microfrontends config)
+  //       // from the host into the sandbox. Runs `vercel pull` on the host plus
+  //       // `vercel microfrontends pull` when the project uses microfrontends.
+  //       // Requires the Vercel CLI on PATH and `.vercel/project.json` in the
+  //       // worktree. Fails open: sandbox still starts on pull errors.
+  //       // "pullVercel": true,
+  //       // "vercelEnvTarget": "development"
+  //     }
+  //   ]
+  // ]
+}

@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "opencode-sandbox",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "OpenCode workspace plugin that runs sessions in Vercel Sandbox.",
+  "main": "./dist/index.js",
+  "exports": {
+    ".": "./dist/index.js",
+    "./server": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "opencode",
+    "test": "bun test ./test",
+    "typecheck": "tsc --noEmit"
+  },
+  "packageManager": "bun@1.3.11",
+  "dependencies": {
+    "@opencode-ai/plugin": "^1.15.5",
+    "@vercel/oidc": "^3.4.1",
+    "@vercel/sandbox": "^2.0.0-beta.21"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.0",
+    "typescript": "^6.0.3"
+  }
+}
