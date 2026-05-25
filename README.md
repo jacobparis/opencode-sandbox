@@ -4,12 +4,24 @@ OpenCode workspace plugin that runs sessions in [Vercel Sandbox](https://vercel.
 
 Each workspace becomes a persistent Vercel Sandbox (beta), cloned from your repo's `origin` at the current branch, with `opencode serve` running inside it. OpenCode proxies all requests into the sandbox over HTTPS, secured by per-workspace Basic auth.
 
+## Status
+
+Workspace creation, sandbox provisioning, opencode install, and workspace teardown all work against opencode `1.15.10` (latest stable as of writing).
+
+**Streaming chat responses from the sandbox back to the host TUI requires [opencode PR #26076](https://github.com/anomalyco/opencode/pull/26076)** to be merged. That PR adds a single line to opencode's `workspaceProxyURL` to strip the host's `?directory=` query param before forwarding requests to sandbox-side opencode. Without it, the sandbox falls back to `worktree="/"`, which corrupts `path.relative()` calls, wipes the TUI's session list, and prevents streaming events from replaying through `workspace-sync`. The plugin's runtime module already comments on this assumption (see `src/runtime.ts:194`).
+
+Until PR #26076 ships:
+
+- Either run a custom-built opencode with the patch applied (`git clone https://github.com/anomalyco/opencode`, apply the diff, `bun install && bun run build`, replace `~/.opencode/bin/opencode`)
+- Or accept that sandboxed workspaces can be *created and managed* but chat responses won't stream back through the TUI
+
 ## Requirements
 
-- OpenCode `>= 1.4.11`
+- OpenCode `>= 1.15.5` (uses the `experimental_workspace.register` plugin API)
 - Vercel Sandbox enabled on your account and a Vercel project linked in the current directory (`vercel link`). The plugin uses [Vercel OIDC](https://vercel.com/docs/oidc) for auth; `vercel env pull` is the easiest way to get a `VERCEL_OIDC_TOKEN` locally.
 - A GitHub token reachable via one of: `gh auth login`, `GITHUB_TOKEN` / `GH_TOKEN` env, or the `githubToken` plugin option. Only `github.com` remotes are supported in v1.
 - The branch you want to sandbox must be pushed to `origin` (have an upstream tracking ref). Uncommitted changes are refused by default; see the `uncommitted` option.
+- Only **git projects** are supported. opencode's own `/experimental/worktree` endpoint refuses non-git projects with `WorktreeNotGitError` before our plugin is even called (see `@opencode-ai/sdk/dist/v2/gen/types.gen.d.ts:1062`).
 
 ## Configure
 
@@ -123,7 +135,7 @@ Vercel Sandbox's firewall supports [credential brokering](https://vercel.com/doc
 
 ## Logging
 
-The plugin logs to opencode's server log via `client.app.log` with `service: "vercel-sandbox"`. Set `OPENCODE_SANDBOX_DEBUG=1` to enable debug-level entries (per-attempt health probes etc.).
+The plugin logs to opencode's server log via `client.app.log` with `service: "vercel-sandbox"`. Set `OPENCODE_SANDBOX_DEBUG=1` to enable debug-level entries (per-attempt health probes, per-step uncommitted-overlay progress, etc.).
 
 ## Debugging
 
@@ -134,3 +146,22 @@ OPENCODE_EXPERIMENTAL_WORKSPACES=true opencode serve
 # in another shell
 OPENCODE_EXPERIMENTAL_WORKSPACES=true opencode attach http://localhost:4096
 ```
+
+The host log file is at `~/.local/share/opencode/log/<timestamp>.log`. Grep for `service=vercel-sandbox` to filter.
+
+## Cleanup of orphan sandboxes
+
+When `create` fails partway through (network blip, health-probe timeout, install error, etc.), the sandbox is deliberately left running in your Vercel account so you can inspect it (`tail $HOME/opencode-serve.log` inside, or just read state). The trade-off: it stays in your sandbox quota until you delete it.
+
+Two ways to clean up:
+
+```sh
+# Via opencode UI: select the workspace, choose Remove. The plugin's
+# `remove()` calls `sandbox.delete()` and is idempotent.
+
+# Or directly via Vercel CLI:
+vercel sandbox ls | grep opencode-
+vercel sandbox rm <name-or-id>
+```
+
+If you see workspaces listed in opencode but the underlying sandbox name doesn't appear in `vercel sandbox ls`, the sandbox was already torn down (e.g., snapshot expired) and Remove will just clear opencode's local record.
