@@ -27,6 +27,11 @@ export async function applyUncommittedFromHost(
 ): Promise<void> {
   const { $, worktree } = ctx.input
 
+  // Each step below logs BEFORE it starts so a hang surfaces in the right
+  // place. A real incident left these ops silent and the user saw a 35min
+  // deadlock with no signal of which step was wedged.
+  await ctx.log("debug", "uncommitted: git fetch origin", { branch, worktree })
+
   // Refresh `origin/<branch>` so the diff base lines up with whatever the
   // sandbox just cloned. If fetch fails (offline, no access) we fall back
   // to diffing against host HEAD and warn; the apply may fail on unpushed
@@ -41,6 +46,7 @@ export async function applyUncommittedFromHost(
     })
   }
 
+  await ctx.log("debug", "uncommitted: git diff", { diffBase })
   const diffResult = await $.cwd(worktree)`git diff ${diffBase} --binary --no-color`.nothrow().quiet()
   if (diffResult.exitCode !== 0) {
     throw new Error(
@@ -49,6 +55,7 @@ export async function applyUncommittedFromHost(
   }
   const diff = diffResult.stdout
 
+  await ctx.log("debug", "uncommitted: git ls-files --others --exclude-standard", { diffBytes: diff.length })
   const untrackedResult = await $.cwd(worktree)`git ls-files --others --exclude-standard -z`.nothrow().quiet()
   if (untrackedResult.exitCode !== 0) {
     throw new Error(
@@ -85,9 +92,15 @@ export async function applyUncommittedFromHost(
     return
   }
 
+  await ctx.log("debug", "uncommitted: uploading to sandbox via writeFiles", {
+    fileCount: writes.length,
+    totalBytes: writes.reduce((sum, w) => sum + w.content.length, 0),
+  })
   await sandbox.writeFiles(writes)
+  await ctx.log("debug", "uncommitted: writeFiles complete")
 
   if (diff.length > 0) {
+    await ctx.log("debug", "uncommitted: running `git apply` in sandbox")
     const apply = await sandbox.runCommand({
       cmd: "bash",
       args: [
